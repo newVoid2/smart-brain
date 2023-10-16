@@ -6,11 +6,15 @@ import ImageLinkForm from './components/ImageLinkForm/ImageLinkForm';
 import FaceRecognition from './components/FaceRecognition/FaceRecognition';
 import Signin from './components/Signin/Signin';
 import Register from './components/Register/Register';
+import About from './components/About/About';
 import Rank from './components/Rank/Rank';
+import FaceDetails from './components/FaceDetails/FaceDetails';
 import './App.css';
 
-const MODEL_ID = 'face-detection'; 
-//const MODEL_ID = 'color-recognition';
+const MODEL_IDS = ['general-image-recognition', 'color-recognition', 'face-detection']; 
+// 'color-recognition';
+// 'face-detection'
+// 'general-image-recognition'
 
 const clarifaiRequestOptions = (imageUrl) => {
   // Your PAT (Personal Access Token) can be found in the portal under Authentification
@@ -62,7 +66,9 @@ class App extends Component{
       imageUrl: '',
       box: {},
       route: 'signin',
-      isSignedIn: false
+      isSignedIn: false,
+      colors: '',
+      imageType: ''
     }
   }
   
@@ -80,6 +86,32 @@ class App extends Component{
     };
   }
 
+  typeOfImage = (data) => {
+    console.log(data);
+    const clarifaiType = data.outputs[0].data.concepts[0].name;
+    const identification = `This photo is of a ${clarifaiType}`;
+    return identification;
+  }
+
+  colorsImageContain = (data) => {
+    const colorsIdentified = []
+    const clarifaiColors = data.outputs[0].data.colors
+    clarifaiColors.forEach((color) => {
+      colorsIdentified.push(color.w3c.name)
+    })
+    const colorsIdentifiedString = `This photo contains the colors: ${colorsIdentified.toString()}`
+    return colorsIdentifiedString;
+  }
+
+  displayImageType = (imageType) => {
+    console.log(imageType);
+    this.setState({imageType: imageType});
+  }
+
+  displayImageColors = (colors) => {
+    this.setState({colors: colors});
+  }
+
   displayFaceBox = (box) => {
     console.log(box);
     this.setState({box: box});
@@ -92,10 +124,29 @@ class App extends Component{
   onButtonSubmit = () => {
     this.setState({imageUrl: this.state.input})
     console.log('click');
-    fetch("https://api.clarifai.com/v2/models/" + MODEL_ID + "/outputs", clarifaiRequestOptions(this.state.input))
-    .then(response => response.json())
-    .then(result => this.displayFaceBox(this.calculateFaceLocation(result)))
-    .catch(error => console.log('error', error));
+    //fetchModelId = MODEL_IDS[1];
+    MODEL_IDS.forEach((MODEL_ID) => {
+      fetch("https://api.clarifai.com/v2/models/" + MODEL_ID + "/outputs", clarifaiRequestOptions(this.state.input))
+      .then(response => response.json())
+      // .then(result => this.displayImageType(this.typeOfImage(result)))
+      // .then(result => this.displayImageColors(this.colorsImageContain(result)))
+      // .then(result => this.displayFaceBox(this.calculateFaceLocation(result)))
+      .then(result => {
+        if(MODEL_ID === 'face-detection') {
+          this.displayFaceBox(this.calculateFaceLocation(result));
+        } else if(MODEL_ID === 'color-recognition') {
+          this.displayImageColors(this.colorsImageContain(result));
+        } else if(MODEL_ID === 'general-image-recognition') {
+          this.displayImageType(this.typeOfImage(result));
+        }
+      })
+      .catch(error => console.log('error', error));
+    })
+    // fetch("https://api.clarifai.com/v2/models/" + fetchModelId + "/outputs", clarifaiRequestOptions(this.state.input))
+    // .then(response => response.json())
+    // .then(result => console.log(this.typeOfImage(result)))
+    // // .then(result => this.displayFaceBox(this.calculateFaceLocation(result)))
+    // .catch(error => console.log('error', error));
   }
 
   onRouteChange = (route) => {
@@ -108,7 +159,7 @@ class App extends Component{
   }
 
   render() {
-    const { isSignedIn, box, imageUrl, route } = this.state;
+    const { isSignedIn, box, imageUrl, route, colors, imageType } = this.state;
     return (
       <div className="App">
         <ParticlesBg type="cobweb" color='#ffffff' num={200} bg={true} />
@@ -118,13 +169,20 @@ class App extends Component{
             <Logo />
             <Rank />
             <ImageLinkForm onInputChange={this.onInputChange} onButtonSubmit={this.onButtonSubmit}/>
+            <FaceDetails imageType={imageType} colors={colors} />
             <FaceRecognition box={box} imageUrl={imageUrl}/>
           </div>
           :
           (
             route === 'signin' 
             ? <Signin onRouteChange={this.onRouteChange}/>
-            : <Register onRouteChange={this.onRouteChange} />
+            : 
+            (
+              route === 'about'
+              ? <About onRouteChange={this.onRouteChange} />
+              :
+              <Register onRouteChange={this.onRouteChange} />
+            )
 
           )
           
