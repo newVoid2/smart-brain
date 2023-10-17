@@ -12,9 +12,6 @@ import FaceDetails from './components/FaceDetails/FaceDetails';
 import './App.css';
 
 const MODEL_IDS = ['general-image-recognition', 'color-recognition', 'face-detection']; 
-// 'color-recognition';
-// 'face-detection'
-// 'general-image-recognition'
 
 const clarifaiRequestOptions = (imageUrl) => {
   // Your PAT (Personal Access Token) can be found in the portal under Authentification
@@ -55,9 +52,6 @@ const clarifaiRequestOptions = (imageUrl) => {
   return requestOptions;
 }
 
-
-
-
 class App extends Component{
   constructor() {
     super();
@@ -68,8 +62,25 @@ class App extends Component{
       route: 'signin',
       isSignedIn: false,
       colors: '',
-      imageType: ''
+      imageType: '',
+      user:  {
+        id: '',
+        name: '',
+        email: '',
+        entries: 0,
+        joined: ''
     }
+    }
+  }
+
+  loadUser = (data) => {
+    this.setState({user: {
+      id: data.id,
+      name: data.name,
+      email: data.email,
+      entries: data.entries,
+      joined: data.joined
+  }})
   }
   
   calculateFaceLocation = (data) => {
@@ -121,17 +132,27 @@ class App extends Component{
     this.setState({input: event.target.value});
   }
 
-  onButtonSubmit = () => {
+  onPictureSubmit = () => {
     this.setState({imageUrl: this.state.input})
     console.log('click');
     //fetchModelId = MODEL_IDS[1];
     MODEL_IDS.forEach((MODEL_ID) => {
       fetch("https://api.clarifai.com/v2/models/" + MODEL_ID + "/outputs", clarifaiRequestOptions(this.state.input))
       .then(response => response.json())
-      // .then(result => this.displayImageType(this.typeOfImage(result)))
-      // .then(result => this.displayImageColors(this.colorsImageContain(result)))
-      // .then(result => this.displayFaceBox(this.calculateFaceLocation(result)))
       .then(result => {
+        if(result) {
+          fetch('http://localhost:3000/image', {
+            method: 'put',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                id: this.state.user.id,
+            })
+          })
+          .then(response => response.json())
+          .then(count => {
+              this.setState(Object.assign(this.state.user, {entries: count}));
+          })
+        }
         if(MODEL_ID === 'face-detection') {
           this.displayFaceBox(this.calculateFaceLocation(result));
         } else if(MODEL_ID === 'color-recognition') {
@@ -142,11 +163,6 @@ class App extends Component{
       })
       .catch(error => console.log('error', error));
     })
-    // fetch("https://api.clarifai.com/v2/models/" + fetchModelId + "/outputs", clarifaiRequestOptions(this.state.input))
-    // .then(response => response.json())
-    // .then(result => console.log(this.typeOfImage(result)))
-    // // .then(result => this.displayFaceBox(this.calculateFaceLocation(result)))
-    // .catch(error => console.log('error', error));
   }
 
   onRouteChange = (route) => {
@@ -159,7 +175,7 @@ class App extends Component{
   }
 
   render() {
-    const { isSignedIn, box, imageUrl, route, colors, imageType } = this.state;
+    const { isSignedIn, box, imageUrl, route, colors, imageType, user } = this.state;
     return (
       <div className="App">
         <ParticlesBg type="cobweb" color='#ffffff' num={200} bg={true} />
@@ -167,21 +183,21 @@ class App extends Component{
         {route === 'home' ?
           <div>
             <Logo />
-            <Rank />
-            <ImageLinkForm onInputChange={this.onInputChange} onButtonSubmit={this.onButtonSubmit}/>
+            <Rank name={user.name} entries={user.entries} />
+            <ImageLinkForm onInputChange={this.onInputChange} onPictureSubmit={this.onPictureSubmit}/>
             <FaceDetails imageType={imageType} colors={colors} />
             <FaceRecognition box={box} imageUrl={imageUrl}/>
           </div>
           :
           (
             route === 'signin' 
-            ? <Signin onRouteChange={this.onRouteChange}/>
+            ? <Signin loadUser={this.loadUser} onRouteChange={this.onRouteChange}/>
             : 
             (
               route === 'about'
               ? <About onRouteChange={this.onRouteChange} />
               :
-              <Register onRouteChange={this.onRouteChange} />
+              <Register loadUser={this.loadUser} onRouteChange={this.onRouteChange} />
             )
 
           )
