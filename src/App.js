@@ -58,7 +58,7 @@ class App extends Component{
     this.state = {
       input: '',
       imageUrl: '',
-      box: {},
+      box: [],
       route: 'signin',
       isSignedIn: false,
       colors: '',
@@ -84,21 +84,28 @@ class App extends Component{
   }
   
   calculateFaceLocation = (data) => {
-    const clarifaiFace = data.outputs[0].data.regions[0].region_info.bounding_box;
+    console.log(data.outputs[0].data.regions);
+    const clarifaiFaces = data.outputs[0].data.regions;
+    if(clarifaiFaces === undefined) {
+      return 
+    }
     const image = document.getElementById('inputimage');
     const width = Number(image.width);
     const height = Number(image.height);
-    console.log(width, height);
-    return {
-      leftCol: clarifaiFace.left_col * width,
-      topRow: clarifaiFace.top_row * height,
-      rightCol: width - (clarifaiFace.right_col * width),
-      bottomRow: height - (clarifaiFace.bottom_row * height)
-    };
+    const facebox = [];
+    clarifaiFaces.forEach((region, i) => {
+      let regioninfo = region.region_info.bounding_box;
+      facebox.push({
+        leftCol: regioninfo.left_col * width,
+        topRow: regioninfo.top_row * height,
+        rightCol: width - (regioninfo.right_col * width),
+        bottomRow: height - (regioninfo.bottom_row * height)
+      });
+    })
+    return facebox;
   }
 
   typeOfImage = (data) => {
-    console.log(data);
     const clarifaiType = data.outputs[0].data.concepts[0].name;
     const identification = `This photo is of a ${clarifaiType}`;
     return identification;
@@ -115,7 +122,6 @@ class App extends Component{
   }
 
   displayImageType = (imageType) => {
-    console.log(imageType);
     this.setState({imageType: imageType});
   }
 
@@ -125,6 +131,9 @@ class App extends Component{
 
   displayFaceBox = (box) => {
     console.log(box);
+    if(box === undefined) {
+      return 
+    }
     this.setState({box: box});
   }
 
@@ -150,7 +159,7 @@ class App extends Component{
           })
           .then(response => response.json())
           .then(count => {
-              this.setState(Object.assign(this.state.user, {entries: count}));
+              this.setState(Object.assign(this.state.user, {entries: Math.ceil(count - 2/3)}));
           })
         }
         if(MODEL_ID === 'face-detection') {
