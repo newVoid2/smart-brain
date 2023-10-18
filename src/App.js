@@ -13,64 +13,27 @@ import './App.css';
 
 const MODEL_IDS = ['general-image-recognition', 'color-recognition', 'face-detection']; 
 
-const clarifaiRequestOptions = (imageUrl) => {
-  // Your PAT (Personal Access Token) can be found in the portal under Authentification
-  const PAT = '1a7136361a2044b389eefd4de996e50b';
-  // Specify the correct user_id/app_id pairings
-  // Since you're making inferences outside your app's scope
-  const USER_ID = 'richardd_kerr';       
-  const APP_ID = 'smartbrain';
-  // Change these to whatever model and image URL you want to use
-  // const MODEL_ID = 'face-detection'; 
-  const IMAGE_URL = imageUrl;
-
-  const raw = JSON.stringify({
-      "user_app_id": {
-          "user_id": USER_ID,
-          "app_id": APP_ID
-      },
-      "inputs": [
-          {
-              "data": {
-                  "image": {
-                      "url": IMAGE_URL
-                  }
-              }
-          }
-      ]
-  });
-
-  const requestOptions = {
-      method: 'POST',
-      headers: {
-          'Accept': 'application/json',
-          'Authorization': 'Key ' + PAT
-      },
-      body: raw
-  };
-
-  return requestOptions;
+const initialState = {
+  input: '',
+  imageUrl: '',
+  box: [],
+  route: 'signin',
+  isSignedIn: false,
+  colors: '',
+  imageType: '',
+  user:  {
+    id: '',
+    name: '',
+    email: '',
+    entries: 0,
+    joined: ''
+  }
 }
 
 class App extends Component{
   constructor() {
     super();
-    this.state = {
-      input: '',
-      imageUrl: '',
-      box: [],
-      route: 'signin',
-      isSignedIn: false,
-      colors: '',
-      imageType: '',
-      user:  {
-        id: '',
-        name: '',
-        email: '',
-        entries: 0,
-        joined: ''
-    }
-    }
+    this.state = initialState;
   }
 
   loadUser = (data) => {
@@ -83,12 +46,9 @@ class App extends Component{
   }})
   }
   
+  // Calculate the dimension of four end points on a face
   calculateFaceLocation = (data) => {
-    console.log(data.outputs[0].data.regions);
     const clarifaiFaces = data.outputs[0].data.regions;
-    if(clarifaiFaces === undefined) {
-      return 
-    }
     const image = document.getElementById('inputimage');
     const width = Number(image.width);
     const height = Number(image.height);
@@ -104,20 +64,20 @@ class App extends Component{
     })
     return facebox;
   }
-
+   
+  // Get the type of photo
   typeOfImage = (data) => {
     const clarifaiType = data.outputs[0].data.concepts[0].name;
-    const identification = `This photo is of a ${clarifaiType}`;
+    const identification = `This photo highest concept is: ${clarifaiType}`;
     return identification;
   }
-
+   
+  // Get the colors that are in the photo
   colorsImageContain = (data) => {
-    const colorsIdentified = []
-    const clarifaiColors = data.outputs[0].data.colors
-    clarifaiColors.forEach((color) => {
-      colorsIdentified.push(color.w3c.name)
-    })
-    const colorsIdentifiedString = `This photo contains the colors: ${colorsIdentified.toString()}`
+    const colorsIdentified = [];
+    const clarifaiColors = data.outputs[0].data.colors;
+    clarifaiColors.forEach((color) => colorsIdentified.push(color.w3c.name));
+    const colorsIdentifiedString = `This photo contains the colors: ${colorsIdentified.toString()}`;
     return colorsIdentifiedString;
   }
 
@@ -130,26 +90,28 @@ class App extends Component{
   }
 
   displayFaceBox = (box) => {
-    console.log(box);
-    if(box === undefined) {
-      return 
-    }
     this.setState({box: box});
   }
 
   onInputChange = (event) => {
     this.setState({input: event.target.value});
   }
-
+  
+  // Get the data from the APIs and update entry count
   onPictureSubmit = () => {
     this.setState({imageUrl: this.state.input})
-    console.log('click');
-    //fetchModelId = MODEL_IDS[1];
     MODEL_IDS.forEach((MODEL_ID) => {
-      fetch("https://api.clarifai.com/v2/models/" + MODEL_ID + "/outputs", clarifaiRequestOptions(this.state.input))
+      fetch('http://localhost:3000/imageurl', {
+        method: 'post',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            input: this.state.input,
+            model: MODEL_ID
+        })
+      })
       .then(response => response.json())
-      .then(result => {
-        if(result) {
+      .then(response => {
+        if(response) {
           fetch('http://localhost:3000/image', {
             method: 'put',
             headers: {'Content-Type': 'application/json'},
@@ -161,13 +123,14 @@ class App extends Component{
           .then(count => {
               this.setState(Object.assign(this.state.user, {entries: Math.ceil(count - 2/3)}));
           })
+          .catch(console.log)
         }
         if(MODEL_ID === 'face-detection') {
-          this.displayFaceBox(this.calculateFaceLocation(result));
+          this.displayFaceBox(this.calculateFaceLocation(response));
         } else if(MODEL_ID === 'color-recognition') {
-          this.displayImageColors(this.colorsImageContain(result));
+          this.displayImageColors(this.colorsImageContain(response));
         } else if(MODEL_ID === 'general-image-recognition') {
-          this.displayImageType(this.typeOfImage(result));
+          this.displayImageType(this.typeOfImage(response));
         }
       })
       .catch(error => console.log('error', error));
@@ -176,7 +139,7 @@ class App extends Component{
 
   onRouteChange = (route) => {
     if(route === 'signout') {
-      this.setState({isSignedIn: false});
+      this.setState(initialState);
     } else if (route === 'home') {
       this.setState({isSignedIn: true});
     }
@@ -204,7 +167,7 @@ class App extends Component{
             : 
             (
               route === 'about'
-              ? <About onRouteChange={this.onRouteChange} />
+              ? <About />
               :
               <Register loadUser={this.loadUser} onRouteChange={this.onRouteChange} />
             )

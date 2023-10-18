@@ -9,6 +9,7 @@ const Logo = () => {
             <Tilt className="Tilt" options={{max: 55}}>
                 <div className="Tilt-inner pa3">
                     <img alt="logo" src={brain}/>
+                    <p><a target="_blank" href="https://icons8.com/icon/99625/brain" rel="noreferrer">Brain</a> icon by <a target="_blank" href="https://icons8.com" rel="noreferrer">Icons8</a></p>
                 </div>
             </Tilt>
         </div>
