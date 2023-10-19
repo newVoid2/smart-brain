@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, useState, useEffect} from 'react';
 import ParticlesBg from 'particles-bg';
 import Navigation from './components/Navigation/Navigation';
 import Logo from './components/Logo/Logo';
