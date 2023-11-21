@@ -8,7 +8,7 @@ const About = () => {
             <h1 className="f1 tc">Welcome to SmartBrain</h1>
             <p>This app can detect the highest concept of the image, list the colors that made up the image and detect all the faces in the image.</p>
             <hr />
-            <p>Copyright &copy; 2023 Developed by <a href="https://www.linkedin.com/in/richard-kerr-198a6a290/" target="_blank" rel="noreferrer">Richard Kerr</a> base on the <a href="https://zerotomastery.io/courses/coding-bootcamp/" target="_blank" rel="noreferrer">ZTM Web Development Course</a></p>
+            <p>Copyright &copy; 2023 Developed by <a href="https://www.linkedin.com/in/richard-kerr-198a6a290/" target="_blank" rel="noreferrer">Richard Kerr</a></p>
         </article>
         </div>
     );
